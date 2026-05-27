@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor List Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK Scripts -->
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+        "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+      }
+    }
+    </script>
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <div class="title-area">
+                <h1>Vendor List Directory</h1>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Manage your contractors and dealers across all
+                    categories.</p>
+            </div>
+
+            <div class="actions-area">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input"
+                        placeholder="Search by name, email, or contact...">
+                </div>
+                <button id="addContactBtn" class="btn btn-primary">
+                    <span>+</span> Add Contact
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div class="table-wrapper">
+                <table id="vendorTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">Sr. No.</th>
+                            <th>Contractor Name</th>
+                            <th>Concern Person</th>
+                            <th>Designation</th>
+                            <th>Mail ID</th>
+                            <th>Contact No.</th>
+                            <th>Dealers of</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Content will be injected by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Contact</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Enter the details of the
+                    new vendor/contractor.</p>
+            </div>
+
+            <form id="addContactForm">
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="category" style="flex: 1;">
+                            <option value="HVAC">HVAC Contractor</option>
+                            <option value="LIFT">LIFT Contractor</option>
+                            <option value="Electrical">Electrical Contractor</option>
+                            <option value="Plumbing">Plumbing STP Solar Contractor</option>
+                            <option value="Stack Parking">Stack Parking System Contractor</option>
+                            <option value="ELV">ELV // FAS // PAS Contractor</option>
+                            <option value="Fire Fighting">Fire Fighting Contractor</option>
+                        </select>
+                        <button type="button" id="addCustomCategoryBtn" class="btn" style="padding: 0 12px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: bold; font-size: 1.2rem;" title="Add New Category">+</button>
+                    </div>
+                </div>
+
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label for="contractorName">Contractor Name</label>
+                        <input type="text" id="contractorName" placeholder="e.g. Amrith Enterprises">
+                    </div>
+                    <div class="form-group">
+                        <label for="concernPerson">Concern Person</label>
+                        <input type="text" id="concernPerson" placeholder="e.g. Prashant Rao">
+                    </div>
+                </div>
+
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label for="designation">Designation</label>
+                        <input type="text" id="designation" placeholder="e.g. Director">
+                    </div>
+                    <div class="form-group">
+                        <label for="mailId">Mail ID</label>
+                        <input type="text" id="mailId" placeholder="e.g. prashant@mail.com">
+                    </div>
+                </div>
+
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label for="contactNo">Contact No.</label>
+                        <input type="text" id="contactNo" placeholder="e.g. 9822055496">
+                    </div>
+                    <div class="form-group">
+                        <label for="dealers">Dealers of</label>
+                        <input type="text" id="dealers" placeholder="e.g. Daikin, OTIS">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" id="cancelBtn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
