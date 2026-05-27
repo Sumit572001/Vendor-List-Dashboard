@@ -1,6 +1,4 @@
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, push, set, remove } from "firebase/database";
-
+// Firebase Compat SDK (no import statements needed)
 const firebaseConfig = {
   apiKey: "AIzaSyCuuwp1acUFZBSW3c4u8fjyTeLCHvnGDgg",
   authDomain: "vendor-list-dashboard.firebaseapp.com",
@@ -8,13 +6,12 @@ const firebaseConfig = {
   projectId: "vendor-list-dashboard",
   storageBucket: "vendor-list-dashboard.firebasestorage.app",
   messagingSenderId: "319292498066",
-  appId: "1:319292498066:web:521736b4b0dfab4322464b",
-  measurementId: "G-089T0FGDBY"
+  appId: "1:319292498066:web:521736b4b0dfab4322464b"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const vendorsRef = ref(db, 'vendors');
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const vendorsRef = db.ref('vendors');
 
 const tableBody = document.getElementById('tableBody');
 const searchInput = document.getElementById('searchInput');
@@ -28,92 +25,52 @@ let vendors = [];
 let editingId = null;
 let customCategories = JSON.parse(localStorage.getItem('customCategories') || '[]');
 
-// Add Custom Category Popup Logic
+// ── Add Custom Category Popup ──────────────────────────────────────────────
 document.getElementById('addCustomCategoryBtn').addEventListener('click', () => {
-    // Create popup overlay
     const popupOverlay = document.createElement('div');
-    popupOverlay.id = 'categoryPopupOverlay';
     popupOverlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); display: flex; align-items: center;
         justify-content: center; z-index: 9999; backdrop-filter: blur(4px);
     `;
-
     popupOverlay.innerHTML = `
-        <div style="background: white; border-radius: 16px; padding: 2rem; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideIn 0.2s ease;">
+        <div style="background: white; border-radius: 16px; padding: 2rem; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
             <h3 style="margin: 0 0 0.5rem; font-size: 1.2rem; font-weight: 700; color: #1e293b;">➕ Add New Category</h3>
             <p style="margin: 0 0 1.5rem; color: #64748b; font-size: 0.85rem;">Enter a name for the new contractor category.</p>
             <label style="font-size: 0.8rem; font-weight: 600; color: #374151; display: block; margin-bottom: 6px;">Category Name</label>
             <input id="newCategoryInput" type="text" placeholder="e.g. Civil Contractor" style="
                 width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0;
-                border-radius: 8px; font-size: 0.95rem; outline: none; box-sizing: border-box;
-                transition: border-color 0.2s;
-            " autofocus>
+                border-radius: 8px; font-size: 0.95rem; outline: none; box-sizing: border-box;">
             <div style="display: flex; gap: 10px; margin-top: 1.5rem; justify-content: flex-end;">
-                <button id="cancelCategoryBtn" type="button" style="
-                    padding: 8px 20px; border: 1.5px solid #e2e8f0; background: white;
-                    border-radius: 8px; cursor: pointer; font-weight: 600; color: #64748b;
-                    transition: all 0.2s;
-                ">Cancel</button>
-                <button id="saveCategoryBtn" type="button" style="
-                    padding: 8px 20px; background: #2563eb; color: white; border: none;
-                    border-radius: 8px; cursor: pointer; font-weight: 600;
-                    transition: all 0.2s;
-                ">Add Category</button>
+                <button id="cancelCategoryBtn" type="button" style="padding: 8px 20px; border: 1.5px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #64748b;">Cancel</button>
+                <button id="saveCategoryBtn" type="button" style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Add Category</button>
             </div>
         </div>
     `;
-
     document.body.appendChild(popupOverlay);
 
     const input = document.getElementById('newCategoryInput');
     input.focus();
-    input.addEventListener('focus', () => input.style.borderColor = '#2563eb');
-    input.addEventListener('blur', () => input.style.borderColor = '#e2e8f0');
 
-    // Close on Cancel
-    document.getElementById('cancelCategoryBtn').addEventListener('click', () => {
-        popupOverlay.remove();
-    });
+    document.getElementById('cancelCategoryBtn').addEventListener('click', () => popupOverlay.remove());
+    popupOverlay.addEventListener('click', (e) => { if (e.target === popupOverlay) popupOverlay.remove(); });
 
-    // Close on overlay click
-    popupOverlay.addEventListener('click', (e) => {
-        if (e.target === popupOverlay) popupOverlay.remove();
-    });
-
-    // Save Category
     const saveCategory = () => {
         const newCatName = input.value.trim();
-        if (!newCatName) {
-            input.style.borderColor = '#ef4444';
-            input.placeholder = 'Please enter a category name!';
-            return;
-        }
+        if (!newCatName) { input.style.borderColor = '#ef4444'; return; }
 
         const categorySelect = document.getElementById('category');
+        const exists = Array.from(categorySelect.options).some(opt => opt.value.toLowerCase() === newCatName.toLowerCase());
+        if (exists) { input.style.borderColor = '#f59e0b'; input.value = ''; input.placeholder = 'Already exists!'; return; }
 
-        // Check if already exists
-        const exists = Array.from(categorySelect.options).some(
-            opt => opt.value.toLowerCase() === newCatName.toLowerCase()
-        );
-        if (exists) {
-            input.style.borderColor = '#f59e0b';
-            input.value = '';
-            input.placeholder = 'This category already exists!';
-            return;
-        }
-
-        // Add to dropdown
         const option = document.createElement('option');
         option.value = newCatName;
         option.textContent = newCatName + ' Contractor';
         categorySelect.appendChild(option);
         categorySelect.value = newCatName;
 
-        // Save to localStorage so it persists
         customCategories.push(newCatName);
         localStorage.setItem('customCategories', JSON.stringify(customCategories));
-
         popupOverlay.remove();
     };
 
@@ -121,7 +78,7 @@ document.getElementById('addCustomCategoryBtn').addEventListener('click', () => 
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveCategory(); });
 });
 
-// Restore custom categories on page load
+// Restore saved custom categories on page load
 const categorySelect = document.getElementById('category');
 customCategories.forEach(cat => {
     const option = document.createElement('option');
@@ -130,9 +87,11 @@ customCategories.forEach(cat => {
     categorySelect.appendChild(option);
 });
 
+// ── Helpers ────────────────────────────────────────────────────────────────
 const format = (val) => (!val || typeof val !== 'string' || val.trim() === '' || val === '-') ? '-' : val.trim();
 
-onValue(vendorsRef, (snapshot) => {
+// ── Firebase Realtime Listener ─────────────────────────────────────────────
+vendorsRef.on('value', (snapshot) => {
     const data = snapshot.val();
     vendors = [];
     if (data) {
@@ -141,29 +100,35 @@ onValue(vendorsRef, (snapshot) => {
     renderTable(vendors);
 });
 
+// ── Render Table ───────────────────────────────────────────────────────────
 function renderTable(data) {
     tableBody.innerHTML = '';
     const mainCategories = ["HVAC", "LIFT", "Electrical", "Plumbing", "Stack Parking", "ELV", "Fire Fighting"];
+
+    // Add any custom categories not already in the list
+    const allCatKeys = [...new Set([...mainCategories, ...customCategories, ...data.map(v => v.category)])].filter(c => c && c !== 'General');
+
     const grouped = data.reduce((acc, row) => {
         const cat = row.category || 'General';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(row);
+        if (cat !== 'General') {
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(row);
+        }
         return acc;
     }, {});
 
-    const allCategories = [...new Set([...mainCategories, ...Object.keys(grouped)])].filter(c => c !== 'General');
     let globalIndex = 1;
 
-    allCategories.forEach(category => {
+    allCatKeys.forEach(category => {
         const categoryData = grouped[category] || [];
         if (categoryData.length === 0 && searchInput.value !== '') return;
-        
+
         const headerRow = document.createElement('tr');
         headerRow.className = 'category-header';
         headerRow.innerHTML = `<td colspan="8" style="padding: 1rem; text-align: left; background: #fee2e2; border-top: 2px solid var(--primary); color: #991b1b; font-weight: 800; border-bottom: 1px solid var(--primary);">${category.toUpperCase()} CONTRACTOR</td>`;
         tableBody.appendChild(headerRow);
 
-        if (categoryData.length === 0) tableBody.appendChild(createEmptyRow());
+        if (categoryData.length === 0) { tableBody.appendChild(createEmptyRow()); return; }
 
         categoryData.forEach((item) => {
             const tr = document.createElement('tr');
@@ -178,8 +143,8 @@ function renderTable(data) {
                 <td>${dealersVal === '-' ? '-' : `<span style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">${dealersVal}</span>`}</td>
                 <td>
                     <div class="action-btn-container">
-                        <button class="action-btn edit-btn" onclick="window.editVendor('${item.id}')" title="Edit">✏️</button>
-                        <button class="action-btn delete-btn" onclick="window.deleteVendor('${item.id}')" title="Delete">🗑️</button>
+                        <button class="action-btn edit-btn" onclick="editVendor('${item.id}')" title="Edit">✏️</button>
+                        <button class="action-btn delete-btn" onclick="deleteVendor('${item.id}')" title="Delete">🗑️</button>
                     </div>
                 </td>
             `;
@@ -187,15 +152,6 @@ function renderTable(data) {
         });
     });
 
-    document.querySelectorAll('.row-delete-btn').forEach(btn => {
-        btn.onclick = (e) => {
-            const id = e.target.getAttribute('data-id');
-            if (confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
-                remove(ref(db, `vendors/${id}`));
-            }
-        };
-    });
-    
     if (data.length === 0 && searchInput.value !== '') {
         tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">No vendors found matching your search.</td></tr>';
     }
@@ -207,39 +163,41 @@ function createEmptyRow() {
     return tr;
 }
 
-window.deleteVendor = (id) => {
+// ── Row Actions ────────────────────────────────────────────────────────────
+function deleteVendor(id) {
     if (confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
-        remove(ref(db, `vendors/${id}`));
+        db.ref('vendors/' + id).remove();
     }
-};
+}
 
-window.editVendor = (id) => {
+function editVendor(id) {
     const vendor = vendors.find(v => v.id === id);
     if (!vendor) return;
-
     editingId = id;
     modalTitle.innerText = 'Edit Contact Details';
-    document.getElementById('category').value = vendor.category;
-    document.getElementById('contractorName').value = vendor.name === '-' ? '' : vendor.name;
-    document.getElementById('concernPerson').value = vendor.person === '-' ? '' : vendor.person;
-    document.getElementById('designation').value = vendor.designation === '-' ? '' : vendor.designation;
-    document.getElementById('mailId').value = vendor.mail === '-' ? '' : vendor.mail;
-    document.getElementById('contactNo').value = vendor.contact === '-' ? '' : vendor.contact;
-    document.getElementById('dealers').value = vendor.dealers === '-' ? '' : vendor.dealers;
-
+    document.getElementById('category').value = vendor.category || 'HVAC';
+    document.getElementById('contractorName').value = vendor.name === '-' ? '' : (vendor.name || '');
+    document.getElementById('concernPerson').value = vendor.person === '-' ? '' : (vendor.person || '');
+    document.getElementById('designation').value = vendor.designation === '-' ? '' : (vendor.designation || '');
+    document.getElementById('mailId').value = vendor.mail === '-' ? '' : (vendor.mail || '');
+    document.getElementById('contactNo').value = vendor.contact === '-' ? '' : (vendor.contact || '');
+    document.getElementById('dealers').value = vendor.dealers === '-' ? '' : (vendor.dealers || '');
     modalOverlay.style.display = 'flex';
-};
+}
 
+// ── Search ─────────────────────────────────────────────────────────────────
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
-    const filtered = vendors.filter(item => 
-        item.name?.toLowerCase().includes(term) ||
-        item.person?.toLowerCase().includes(term) ||
-        item.contact?.toLowerCase().includes(term)
+    const filtered = vendors.filter(item =>
+        (item.name || '').toLowerCase().includes(term) ||
+        (item.person || '').toLowerCase().includes(term) ||
+        (item.contact || '').toLowerCase().includes(term) ||
+        (item.mail || '').toLowerCase().includes(term)
     );
     renderTable(filtered);
 });
 
+// ── Modal Open / Close ─────────────────────────────────────────────────────
 addContactBtn.addEventListener('click', () => {
     editingId = null;
     modalTitle.innerText = 'Add New Contact';
@@ -250,8 +208,18 @@ addContactBtn.addEventListener('click', () => {
 cancelBtn.addEventListener('click', () => {
     modalOverlay.style.display = 'none';
     addContactForm.reset();
+    editingId = null;
 });
 
+modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+        modalOverlay.style.display = 'none';
+        addContactForm.reset();
+        editingId = null;
+    }
+});
+
+// ── Form Submit (Add & Edit) ───────────────────────────────────────────────
 addContactForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const data = {
@@ -266,12 +234,14 @@ addContactForm.addEventListener('submit', (e) => {
     };
 
     if (editingId) {
-        set(ref(db, `vendors/${editingId}`), data).then(() => {
+        db.ref('vendors/' + editingId).set(data).then(() => {
             modalOverlay.style.display = 'none';
+            editingId = null;
         });
     } else {
-        push(vendorsRef, data).then(() => {
+        vendorsRef.push(data).then(() => {
             modalOverlay.style.display = 'none';
+            addContactForm.reset();
         });
     }
 });
