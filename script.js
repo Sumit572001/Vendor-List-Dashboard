@@ -1,12 +1,12 @@
 // Firebase Compat SDK (no import statements needed)
 const firebaseConfig = {
-  apiKey: "AIzaSyCuuwp1acUFZBSW3c4u8fjyTeLCHvnGDgg",
-  authDomain: "vendor-list-dashboard.firebaseapp.com",
-  databaseURL: "https://vendor-list-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "vendor-list-dashboard",
-  storageBucket: "vendor-list-dashboard.firebasestorage.app",
-  messagingSenderId: "319292498066",
-  appId: "1:319292498066:web:521736b4b0dfab4322464b"
+    apiKey: "AIzaSyCuuwp1acUFZBSW3c4u8fjyTeLCHvnGDgg",
+    authDomain: "vendor-list-dashboard.firebaseapp.com",
+    databaseURL: "https://vendor-list-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "vendor-list-dashboard",
+    storageBucket: "vendor-list-dashboard.firebasestorage.app",
+    messagingSenderId: "319292498066",
+    appId: "1:319292498066:web:521736b4b0dfab4322464b"
 };
 
 firebase.initializeApp(firebaseConfig);
