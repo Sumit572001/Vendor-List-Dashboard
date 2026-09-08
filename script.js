@@ -90,6 +90,9 @@ customCategories.forEach(cat => {
 // ── Helpers ────────────────────────────────────────────────────────────────
 const format = (val) => (!val || typeof val !== 'string' || val.trim() === '' || val === '-') ? '-' : val.trim();
 
+// Show loading indicator initially
+tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #64748b;">⏳ Loading vendor data from Firebase...</td></tr>';
+
 // ── Firebase Realtime Listener ─────────────────────────────────────────────
 vendorsRef.on('value', (snapshot) => {
     const data = snapshot.val();
@@ -98,6 +101,19 @@ vendorsRef.on('value', (snapshot) => {
         Object.keys(data).forEach(key => vendors.push({ id: key, ...data[key] }));
     }
     renderTable(vendors);
+}, (error) => {
+    console.error("Firebase Read Error:", error);
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="8" style="text-align: center; padding: 2rem; color: #ef4444; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;">
+                <strong>⚠️ Firebase Permission Denied Error!</strong><br>
+                <span style="font-size: 0.85rem; color: #991b1b;">
+                    Firebase database rules are blocking read access.<br>
+                    Please go to <strong>Firebase Console ➔ Realtime Database ➔ Rules tab</strong> and change rules to <code>".read": true, ".write": true</code>.
+                </span>
+            </td>
+        </tr>
+    `;
 });
 
 // ── Render Table ───────────────────────────────────────────────────────────
@@ -105,23 +121,42 @@ function renderTable(data) {
     tableBody.innerHTML = '';
     const mainCategories = ["HVAC", "LIFT", "Electrical", "Plumbing", "Stack Parking", "ELV", "Fire Fighting"];
 
-    // Add any custom categories not already in the list
-    const allCatKeys = [...new Set([...mainCategories, ...customCategories, ...data.map(v => v.category)])].filter(c => c && c !== 'General');
-
-    const grouped = data.reduce((acc, row) => {
-        const cat = row.category || 'General';
-        if (cat !== 'General') {
-            if (!acc[cat]) acc[cat] = [];
-            acc[cat].push(row);
+    if (!data || data.length === 0) {
+        if (searchInput.value.trim() !== '') {
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">No vendors found matching your search.</td></tr>';
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">No vendors found in database. Click "+ Add Contact" to create one.</td></tr>';
         }
-        return acc;
-    }, {});
+        return;
+    }
+
+    // Helper for category matching (case-insensitive)
+    const normalizeCat = (cat) => {
+        if (!cat || cat === '-') return 'General';
+        const str = cat.trim();
+        const foundMain = mainCategories.find(c => c.toLowerCase() === str.toLowerCase());
+        if (foundMain) return foundMain;
+        const foundCustom = customCategories.find(c => c.toLowerCase() === str.toLowerCase());
+        if (foundCustom) return foundCustom;
+        return str;
+    };
+
+    const grouped = {};
+    data.forEach(item => {
+        const catKey = normalizeCat(item.category);
+        if (!grouped[catKey]) grouped[catKey] = [];
+        grouped[catKey].push(item);
+    });
+
+    const dataCatKeys = data.map(v => normalizeCat(v.category)).filter(c => c && c !== 'General');
+    const allCatKeys = [...new Set([...mainCategories, ...customCategories, ...dataCatKeys])].filter(c => c && c !== 'General');
 
     let globalIndex = 1;
 
     allCatKeys.forEach(category => {
         const categoryData = grouped[category] || [];
-        if (categoryData.length === 0 && searchInput.value !== '') return;
+        // Hide empty category headers when user is searching
+        if (categoryData.length === 0 && searchInput.value.trim() !== '') return;
 
         const headerRow = document.createElement('tr');
         headerRow.className = 'category-header';
@@ -151,10 +186,6 @@ function renderTable(data) {
             tableBody.appendChild(tr);
         });
     });
-
-    if (data.length === 0 && searchInput.value !== '') {
-        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">No vendors found matching your search.</td></tr>';
-    }
 }
 
 function createEmptyRow() {
